@@ -1,0 +1,1466 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>VOOVR — AI Meeting & Learning Platform</title>
+<link href="https://api.fontshare.com/v2/css?f[]=clash-display@200,400,600,700&f[]=cabinet-grotesk@300,400,500,700,800&display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --void:#05050A;--surface:#0A0A14;--panel:rgba(10,10,20,0.85);
+  --primary:#6C5CE7;--primary-glow:rgba(108,92,231,0.35);
+  --secondary:#00D2D3;--secondary-glow:rgba(0,210,211,0.25);
+  --accent:#FDCB6E;--accent-glow:rgba(253,203,110,0.3);
+  --text:#F0F0F5;--text-dim:rgba(240,240,245,0.6);--text-faint:rgba(240,240,245,0.2);--text-ghost:rgba(240,240,245,0.08);
+  --border:rgba(240,240,245,0.06);--border-lit:rgba(240,240,245,0.14);
+  --font-d:'Clash Display',sans-serif;--font-b:'Cabinet Grotesk',sans-serif;--font-m:'Space Mono',monospace;
+  --ease-out:cubic-bezier(0.16,1,0.3,1);--ease-spring:cubic-bezier(0.34,1.56,0.64,1);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:auto;}
+html::-webkit-scrollbar{display:none;}
+html{scrollbar-width:none;}
+body{background:var(--void);color:var(--text);font-family:var(--font-b);overflow-x:hidden;cursor:none;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
+a{text-decoration:none;color:inherit;cursor:none;}
+img{max-width:100%;display:block;}
+
+body::after{content:'';position:fixed;inset:0;z-index:9100;pointer-events:none;
+  background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 512 512' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  background-size:256px;opacity:0.4;mix-blend-mode:overlay;}
+
+/* Cursor */
+.cursor-dot{position:fixed;top:0;left:0;width:5px;height:5px;background:var(--text);border-radius:50%;pointer-events:none;z-index:999999;transform:translate(-50%,-50%);mix-blend-mode:difference;will-change:transform;}
+.cursor-ring{position:fixed;top:0;left:0;width:36px;height:36px;border:1px solid rgba(240,240,245,0.25);border-radius:50%;pointer-events:none;z-index:999998;transform:translate(-50%,-50%);transition:width .4s var(--ease-out),height .4s var(--ease-out),border-color .4s,background .4s;background:transparent;will-change:transform;}
+body.hovering .cursor-ring{width:68px;height:68px;border-color:rgba(108,92,231,0.7);background:rgba(108,92,231,0.05);}
+body.hovering .cursor-dot{opacity:0.3;transform:translate(-50%,-50%) scale(0.4);}
+@media(max-width:768px){.cursor-dot,.cursor-ring{display:none;}body{cursor:auto;}a{cursor:auto;}}
+
+/* Progress bar */
+#pbar{position:fixed;top:0;left:0;z-index:9997;height:1.5px;width:0%;background:linear-gradient(90deg,var(--primary),var(--secondary),var(--accent));box-shadow:0 0 15px var(--primary-glow);transition:width .08s linear;pointer-events:none;}
+
+/* Loader */
+#loader{position:fixed;inset:0;z-index:100000;background:var(--void);display:flex;flex-direction:column;justify-content:center;align-items:center;gap:2.5rem;transition:opacity .8s var(--ease-out),visibility .8s;}
+#loader.gone{opacity:0;visibility:hidden;pointer-events:none;}
+.ld-icon{width:48px;height:48px;position:relative;margin-bottom:1rem;}
+.ld-icon svg{width:100%;height:100%;}
+.ld-pct{font-family:var(--font-d);font-size:clamp(4rem,12vw,10rem);font-weight:700;color:var(--text);line-height:1;filter:blur(10px);opacity:0;animation:ldUnblur 0.8s .15s forwards ease-out;letter-spacing:-.03em;}
+@keyframes ldUnblur{to{filter:blur(0);opacity:1;}}
+.ld-bar-wrap{width:clamp(140px,28vw,280px);height:1px;background:var(--border);overflow:hidden;}
+.ld-bar{width:0%;height:100%;background:linear-gradient(90deg,var(--primary),var(--secondary),var(--accent));transition:width .12s linear;}
+.ld-label{font-family:var(--font-m);font-size:.6rem;letter-spacing:.3em;text-transform:uppercase;color:var(--text-faint);}
+
+/* WebGL canvas */
+#webgl-canvas{position:fixed;top:0;left:0;width:100vw;height:100vh;z-index:0;pointer-events:none;}
+
+/* Navigation */
+nav{position:fixed;top:0;left:0;width:100%;z-index:1000;padding:clamp(.9rem,2.5vh,1.5rem) clamp(1.2rem,5vw,4rem);display:flex;justify-content:space-between;align-items:center;transition:background .5s,backdrop-filter .5s,border-color .5s;border-bottom:1px solid transparent;background:rgba(5,5,10,.35);backdrop-filter:blur(8px) saturate(120%);-webkit-backdrop-filter:blur(8px) saturate(120%);}
+nav.scrolled{background:rgba(5,5,10,.92);backdrop-filter:blur(32px) saturate(160%);-webkit-backdrop-filter:blur(32px) saturate(160%);border-bottom-color:var(--border);}
+.nav-logo{display:flex;align-items:center;gap:10px;font-family:var(--font-d);font-size:1.6rem;font-weight:700;letter-spacing:-.03em;background:linear-gradient(135deg,var(--text) 40%,var(--accent) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.nav-logo svg{width:28px;height:28px;color:var(--accent);flex-shrink:0;}
+.nav-links{display:flex;gap:clamp(.8rem,2.5vw,2.8rem);align-items:center;}
+.nav-link{font-family:var(--font-m);font-size:.65rem;text-transform:uppercase;letter-spacing:.12em;position:relative;padding-bottom:4px;color:var(--text-dim);transition:color .3s;}
+.nav-link::after{content:'';position:absolute;bottom:0;left:0;width:100%;height:1px;background:var(--primary);transform:scaleX(0);transform-origin:right;transition:transform .4s var(--ease-out);}
+.nav-link:hover{color:var(--text);}
+.nav-link:hover::after{transform:scaleX(1);transform-origin:left;}
+.nav-cta{font-family:var(--font-d);font-size:.85rem;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--void);background:linear-gradient(135deg,var(--primary),var(--secondary));padding:.7rem 1.8rem;transition:transform .3s var(--ease-spring),box-shadow .3s;border-radius:6px;}
+.nav-cta:hover{transform:translateY(-2px);box-shadow:0 8px 30px var(--primary-glow);}
+.nav-ham{display:none;background:none;border:none;cursor:none;flex-direction:column;gap:5px;padding:6px;}
+.nav-ham span{display:block;width:22px;height:1.5px;background:var(--text);border-radius:2px;transition:all .3s;}
+.nav-drawer{display:none;position:fixed;inset:0;z-index:999;background:rgba(5,5,10,.97);backdrop-filter:blur(40px);flex-direction:column;align-items:center;justify-content:center;gap:2rem;opacity:0;pointer-events:none;transition:opacity .4s;}
+.nav-drawer.open{opacity:1;pointer-events:all;}
+.nav-drawer a{font-family:var(--font-d);font-size:2.6rem;font-weight:700;text-transform:uppercase;color:var(--text-dim);transition:color .2s;}
+.nav-drawer a:hover{color:var(--text);}
+.drawer-close{position:absolute;top:1.5rem;right:2rem;background:none;border:none;cursor:none;color:var(--text-dim);font-family:var(--font-m);font-size:.8rem;letter-spacing:.1em;}
+@media(max-width:900px){.nav-links{display:none;}.nav-cta{display:none;}.nav-ham{display:flex;}.nav-drawer{display:flex;}}
+
+/* Container */
+.container{width:100%;max-width:1400px;margin:0 auto;padding:0 clamp(1.2rem,5vw,4rem);position:relative;z-index:1;}
+
+/* Section */
+.section-wrap{position:relative;z-index:1;border-top:1px solid rgba(255,255,255,.03);}
+.glass-bg{background:linear-gradient(180deg,rgba(5,5,10,0.3) 0%,rgba(5,5,10,0.97) 8%,rgba(5,5,10,0.97) 92%,rgba(5,5,10,0.3) 100%);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);}
+.section{padding:clamp(5rem,12vh,10rem) 0;position:relative;}
+h1,h2,h3,h4{font-family:var(--font-d);font-weight:600;text-transform:uppercase;}
+.huge-text{font-size:clamp(2.6rem,7.2vw,8.2rem);line-height:.85;letter-spacing:-.03em;}
+.eyebrow{font-family:var(--font-m);font-size:.65rem;text-transform:uppercase;letter-spacing:.25em;color:var(--secondary);margin-bottom:2rem;display:inline-flex;align-items:center;gap:1rem;}
+.eyebrow::before{content:'';width:28px;height:1px;background:var(--secondary);}
+.blur-reveal{opacity:0;filter:blur(12px);transform:translateY(24px) scale(.97);}
+
+/* Hero */
+#hero{min-height:100vh;display:flex;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+.hero-content{position:relative;margin-top:clamp(3rem,6vh,4.5rem);z-index:2;}
+.hero-tagline{font-family:var(--font-m);font-size:.75rem;letter-spacing:.15em;text-transform:uppercase;color:var(--accent);margin-bottom:1.2rem;display:flex;align-items:center;gap:10px;}
+.hero-tagline .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);animation:pulseDot 2s ease-in-out infinite;}
+@keyframes pulseDot{0%,100%{opacity:1;}50%{opacity:.3;}}
+.hero-title-line{overflow:hidden;}
+.hero-title-line span{display:block;transform:translateY(110%);opacity:0;}
+.hero-desc-wrap{max-width:620px;margin-top:2rem;opacity:0;}
+.hero-desc{font-size:clamp(1rem,1.6vw,1.25rem);line-height:1.7;color:var(--text-dim);}
+.hero-desc strong{color:var(--text);}
+.hero-actions{display:flex;flex-wrap:wrap;gap:1rem;margin-top:2.2rem;opacity:0;}
+.btn{display:inline-flex;justify-content:center;align-items:center;gap:.7rem;padding:1.1rem 2.2rem;border:1px solid var(--border);font-family:var(--font-d);font-size:.95rem;font-weight:600;text-transform:uppercase;letter-spacing:.04em;border-radius:8px;transition:all .3s var(--ease-out);cursor:none;position:relative;overflow:hidden;}
+.btn-primary{background:linear-gradient(135deg,var(--primary),var(--secondary));color:var(--void);border-color:transparent;}
+.btn-primary:hover{transform:translateY(-3px);box-shadow:0 12px 40px var(--primary-glow);}
+.btn-ghost:hover{background:rgba(255,255,255,.04);border-color:var(--border-lit);transform:translateY(-3px);}
+.btn svg{width:16px;height:16px;flex-shrink:0;}
+.hero-strip{position:absolute;bottom:0;left:0;width:100%;padding:clamp(1.2rem,5vw,2.5rem);display:grid;grid-template-columns:1fr auto;gap:2rem;align-items:end;border-top:1px solid var(--border);opacity:0;z-index:2;}
+.hero-strip-left{display:flex;flex-wrap:wrap;gap:2rem;}
+.hero-strip-item{font-family:var(--font-m);font-size:.6rem;letter-spacing:.15em;text-transform:uppercase;color:var(--text-faint);}
+.hero-strip-item strong{color:var(--text-dim);display:block;font-size:.7rem;margin-top:4px;font-family:var(--font-b);letter-spacing:.02em;text-transform:none;}
+
+/* Stats */
+#stats-wrap{position:relative;z-index:1;border-top:1px solid var(--border);border-bottom:1px solid var(--border);background:rgba(5,5,10,0.96);backdrop-filter:blur(20px);}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);}
+.stat-cell{padding:clamp(2rem,5vh,3.5rem) clamp(1.5rem,4vw,3rem);border-right:1px solid var(--border);position:relative;overflow:hidden;transition:background .4s;}
+.stat-cell:last-child{border-right:none;}
+.stat-cell:hover{background:rgba(108,92,231,.04);}
+.stat-cell::after{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,var(--primary),var(--secondary));transform:scaleX(0);transform-origin:left;transition:transform .6s var(--ease-out);}
+.stat-cell:hover::after{transform:scaleX(1);}
+.stat-val{font-family:var(--font-d);font-size:clamp(2rem,4.5vw,3.8rem);font-weight:700;letter-spacing:-.04em;line-height:1;margin-bottom:.7rem;background:linear-gradient(135deg,var(--text),var(--accent));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.stat-lbl{font-family:var(--font-m);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);line-height:1.7;}
+@media(max-width:700px){.stats-grid{grid-template-columns:1fr 1fr;}.stat-cell:nth-child(2){border-right:none;}.stat-cell:nth-child(3){border-top:1px solid var(--border);}.stat-cell:nth-child(4){border-right:none;border-top:1px solid var(--border);}}
+
+/* Marquee */
+.mq{overflow:hidden;border-bottom:1px solid var(--border);background:rgba(5,5,10,0.97);padding:1.2rem 0;}
+.mq-track{display:flex;width:max-content;animation:mq 50s linear infinite;}
+@keyframes mq{from{transform:translateX(0);}to{transform:translateX(-50%);}}
+.mq-track:hover{animation-play-state:paused;}
+.mqi{font-family:var(--font-m);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:var(--text-dim);padding:0 2rem;white-space:nowrap;display:flex;align-items:center;gap:1.2rem;}
+.mqd{width:4px;height:4px;border-radius:50%;background:var(--secondary);flex-shrink:0;}
+
+/* Features Grid */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.8rem,2vw,1.2rem);}
+.feat-card{border:1px solid var(--border);padding:clamp(1.8rem,3vw,2.8rem);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);position:relative;overflow:hidden;transition:border-color .4s,transform .4s var(--ease-out),background .4s;}
+.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:1.5px;background:linear-gradient(90deg,var(--primary),var(--secondary));transform:scaleX(0);transform-origin:left;transition:transform .5s var(--ease-out);}
+.feat-card:hover{border-color:var(--border-lit);transform:translateY(-6px);background:rgba(108,92,231,.04);}
+.feat-card:hover::before{transform:scaleX(1);}
+.feat-icon{width:36px;height:36px;margin-bottom:1.5rem;color:var(--secondary);}
+.feat-icon svg{width:100%;height:100%;}
+.feat-title{font-family:var(--font-d);font-size:clamp(1rem,1.6vw,1.3rem);font-weight:600;letter-spacing:-.02em;margin-bottom:.8rem;}
+.feat-desc{font-size:.9rem;color:var(--text-dim);line-height:1.7;}
+@media(max-width:900px){.feat-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:600px){.feat-grid{grid-template-columns:1fr;}}
+
+/* How It Works */
+.how-grid{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:clamp(1rem,3vw,2rem);align-items:center;}
+.how-step{position:relative;padding:clamp(2rem,4vw,3rem);border:1px solid var(--border);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);transition:border-color .4s,transform .4s var(--ease-out);}
+.how-step:hover{border-color:var(--border-lit);transform:translateY(-4px);}
+.how-n{font-family:var(--font-d);font-size:clamp(2rem,5vw,4rem);font-weight:700;color:var(--text-ghost);letter-spacing:-.06em;line-height:1;margin-bottom:.5rem;}
+.how-icon{width:32px;height:32px;margin-bottom:1.5rem;color:var(--primary);}
+.how-icon svg{width:100%;height:100%;}
+.how-title{font-family:var(--font-d);font-size:clamp(1.1rem,1.6vw,1.4rem);margin-bottom:.8rem;letter-spacing:-.02em;}
+.how-desc{font-size:.85rem;color:var(--text-dim);line-height:1.7;}
+.how-arrow{color:var(--text-faint);width:clamp(24px,3vw,32px);height:clamp(24px,3vw,32px);flex-shrink:0;}
+.how-arrow svg{width:100%;height:100%;}
+@media(max-width:900px){.how-grid{grid-template-columns:1fr;gap:1.5rem;}.how-arrow{transform:rotate(90deg);justify-self:center;}}
+
+/* Modes */
+.mode-card{display:flex;gap:clamp(2rem,5vw,5rem);align-items:stretch;border:1px solid var(--border);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);overflow:hidden;position:relative;}
+.mode-side{padding:clamp(2rem,4vw,3.5rem);flex:1;min-width:0;}
+.mode-badge{display:inline-flex;font-family:var(--font-m);font-size:.55rem;letter-spacing:.18em;text-transform:uppercase;color:var(--primary);border:1px solid rgba(108,92,231,.4);padding:.4rem 1rem;margin-bottom:1.8rem;}
+.mode-title{font-size:clamp(2rem,4vw,3.5rem);line-height:.85;letter-spacing:-.02em;margin-bottom:1.5rem;}
+.mode-desc{font-size:.9rem;color:var(--text-dim);line-height:1.7;margin-bottom:2rem;}
+.mode-list{list-style:none;display:grid;grid-template-columns:1fr 1fr;gap:.6rem;}
+.mode-list li{font-size:.8rem;color:var(--text-dim);padding-left:1.2rem;position:relative;}
+.mode-list li::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary);}
+.mode-card:last-child .mode-list li::before{background:var(--secondary);}
+.mode-visual{width:clamp(200px,35vw,420px);flex-shrink:0;position:relative;display:flex;align-items:center;justify-content:center;padding:2rem;overflow:hidden;}
+.mode-glow{position:absolute;width:150%;height:150%;top:50%;left:50%;transform:translate(-50%,-50%);filter:blur(80px);opacity:.15;border-radius:50%;pointer-events:none;}
+.mode-grid{width:100%;display:flex;flex-direction:column;gap:.8rem;position:relative;z-index:1;padding:1rem;}
+.mode-grid-item{display:flex;flex-direction:column;gap:4px;}
+.mg-label{font-family:var(--font-m);font-size:.55rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-dim);}
+.mg-bar{height:6px;border-radius:3px;background:linear-gradient(90deg,var(--primary),var(--secondary));transition:width 1s var(--ease-out);}
+.mode-chat{width:100%;display:flex;flex-direction:column;gap:.6rem;position:relative;z-index:1;}
+.mode-msg{background:rgba(255,255,255,.04);border:1px solid var(--border);padding:.7rem 1rem;border-radius:6px;font-size:.75rem;line-height:1.5;max-width:90%;}
+.mode-msg-out{background:rgba(0,210,211,.06);border-color:rgba(0,210,211,.2);align-self:flex-end;}
+.msg-speaker{display:block;font-family:var(--font-m);font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;color:var(--secondary);margin-bottom:4px;}
+.mode-msg-in .msg-speaker{color:var(--accent);}
+@media(max-width:900px){.mode-card{flex-direction:column !important;}.mode-visual{width:100%;min-height:200px;}}
+
+/* AI Workspace */
+.workspace-lede{font-size:clamp(1rem,1.6vw,1.2rem);color:var(--text-dim);line-height:1.7;max-width:600px;margin-bottom:clamp(2.5rem,5vh,4rem);}
+.workspace-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(.8rem,1.5vw,1.2rem);}
+.ws-card{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1rem;padding:clamp(2rem,4vw,3rem);border:1px solid var(--border);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);transition:border-color .4s,transform .4s var(--ease-out),background .4s;text-align:center;position:relative;overflow:hidden;}
+.ws-card svg{width:32px;height:32px;color:var(--primary);transition:color .3s,transform .3s var(--ease-spring);}
+.ws-card span{font-family:var(--font-d);font-size:.85rem;letter-spacing:.04em;text-transform:uppercase;color:var(--text-dim);transition:color .3s;}
+.ws-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,transparent,rgba(108,92,231,.04));opacity:0;transition:opacity .4s;}
+.ws-card:hover{border-color:var(--border-lit);transform:translateY(-4px);background:rgba(108,92,231,.04);}
+.ws-card:hover svg{color:var(--secondary);transform:scale(1.1);}
+.ws-card:hover span{color:var(--text);}
+.ws-card:hover::before{opacity:1;}
+@media(max-width:700px){.workspace-grid{grid-template-columns:repeat(2,1fr);}}
+@media(max-width:450px){.workspace-grid{grid-template-columns:1fr;}}
+
+/* Pricing */
+.pricing-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(1rem,2vw,1.5rem);align-items:start;}
+.pricing-card{border:1px solid var(--border);padding:clamp(2rem,4vw,3rem);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);position:relative;transition:border-color .4s,transform .4s var(--ease-out);}
+.pricing-card:hover{transform:translateY(-6px);}
+.pricing-card-pro{border-color:rgba(108,92,231,.3);background:rgba(108,92,231,.04);}
+.pricing-card-pro:hover{border-color:rgba(108,92,231,.5);}
+.pricing-popular{position:absolute;top:-1px;left:50%;transform:translateX(-50%);font-family:var(--font-m);font-size:.5rem;letter-spacing:.15em;text-transform:uppercase;color:var(--void);background:linear-gradient(90deg,var(--primary),var(--secondary));padding:.4rem 1.2rem;}
+.pricing-top{text-align:center;padding-bottom:2rem;border-bottom:1px solid var(--border);margin-bottom:2rem;}
+.pricing-name{font-family:var(--font-m);font-size:.6rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text-faint);margin-bottom:1rem;}
+.pricing-price{display:flex;align-items:baseline;justify-content:center;gap:2px;margin-bottom:.5rem;}
+.pp-currency{font-family:var(--font-d);font-size:1.8rem;font-weight:600;color:var(--text-dim);vertical-align:super;}
+.pp-val{font-family:var(--font-d);font-size:clamp(3.5rem,6vw,5rem);font-weight:700;line-height:1;color:var(--text);}
+.pricing-period{font-size:.8rem;color:var(--text-faint);}
+.pricing-features{list-style:none;display:flex;flex-direction:column;gap:.8rem;margin-bottom:2rem;}
+.pricing-features li{font-size:.82rem;color:var(--text-dim);padding-left:1.4rem;position:relative;}
+.pricing-features li::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:5px;height:5px;border-radius:50%;background:var(--secondary);}
+@media(max-width:900px){.pricing-grid{grid-template-columns:1fr;max-width:420px;margin:0 auto;}}
+
+/* FAQ */
+.faq-list{max-width:760px;margin:0 auto;}
+.faq-item{border-bottom:1px solid var(--border);}
+.faq-q{width:100%;display:flex;justify-content:space-between;align-items:center;gap:1rem;padding:1.5rem 0;background:none;border:none;cursor:none;font-family:var(--font-d);font-size:clamp(.95rem,1.3vw,1.1rem);font-weight:600;color:var(--text);text-align:left;letter-spacing:-.01em;transition:color .3s;}
+.faq-q:hover{color:var(--primary);}
+.faq-q svg{width:18px;height:18px;flex-shrink:0;color:var(--text-faint);transition:transform .3s,color .3s;}
+.faq-item.faq-open .faq-q svg{color:var(--primary);}
+.faq-a{height:0;overflow:hidden;}
+.faq-a p{font-size:.85rem;color:var(--text-dim);line-height:1.7;padding:0 0 1.5rem;max-width:620px;}
+
+/* Testimonials */
+.testimonial-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:clamp(1rem,2vw,1.5rem);}
+.testimonial-card{border:1px solid var(--border);padding:clamp(1.8rem,3vw,2.5rem);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);transition:border-color .4s,transform .4s var(--ease-out);display:flex;flex-direction:column;}
+.testimonial-card:hover{transform:translateY(-6px);border-color:var(--border-lit);}
+.testimonial-stars{font-size:.9rem;letter-spacing:2px;color:var(--accent);margin-bottom:1.2rem;}
+.testimonial-text{font-size:.9rem;color:var(--text-dim);line-height:1.7;flex:1;margin-bottom:1.5rem;}
+.testimonial-author{display:flex;align-items:center;gap:.8rem;}
+.testimonial-avatar{width:40px;height:40px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-family:var(--font-d);font-size:.7rem;font-weight:700;color:var(--void);flex-shrink:0;}
+.testimonial-name{font-family:var(--font-d);font-size:.85rem;font-weight:600;letter-spacing:-.01em;}
+.testimonial-role{font-size:.7rem;color:var(--text-faint);}
+.testimonial-cta{display:flex;justify-content:center;margin-top:2.5rem;}
+@media(max-width:900px){.testimonial-grid{grid-template-columns:1fr;max-width:480px;margin:0 auto;}}
+
+/* CTA */
+.cta-card{text-align:center;padding:clamp(3rem,8vw,6rem) clamp(2rem,5vw,4rem);border:1px solid var(--border);background:rgba(255,255,255,.02);backdrop-filter:blur(12px);position:relative;overflow:hidden;}
+.cta-glow{position:absolute;width:80%;height:80%;top:50%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(ellipse, rgba(108,92,231,.08) 0%, transparent 70%);pointer-events:none;filter:blur(40px);}
+.cta-desc{font-size:clamp(.9rem,1.3vw,1.1rem);color:var(--text-dim);margin:1.5rem auto 2.5rem;max-width:480px;line-height:1.7;}
+.cta-form-wrap{max-width:520px;margin:0 auto;position:relative;z-index:1;}
+.cta-form{display:flex;gap:.8rem;}
+.cta-input{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);padding:1.1rem 1.5rem;color:var(--text);font-family:var(--font-b);font-size:.9rem;transition:border-color .3s;outline:none;border-radius:8px;}
+.cta-input:focus{border-color:var(--primary);}
+.cta-input::placeholder{color:var(--text-faint);}
+.cta-footnote{font-family:var(--font-m);font-size:.55rem;letter-spacing:.1em;color:var(--text-faint);margin-top:1rem;text-transform:uppercase;}
+@media(max-width:550px){.cta-form{flex-direction:column;}}
+
+/* Footer */
+footer{border-top:1px solid var(--border);position:relative;z-index:1;background:rgba(5,5,10,.6);}
+.footer-inner{display:flex;justify-content:space-between;align-items:center;gap:2rem;padding:clamp(1.2rem,3vw,2rem) clamp(1.2rem,5vw,4rem);max-width:1400px;margin:0 auto;}
+.footer-brand{display:flex;align-items:center;gap:8px;font-family:var(--font-d);font-size:1rem;font-weight:700;letter-spacing:-.02em;flex-shrink:0;}
+.footer-links{display:flex;gap:clamp(1rem,2vw,2rem);}
+.footer-link{font-family:var(--font-m);font-size:.55rem;letter-spacing:.12em;text-transform:uppercase;color:var(--text-faint);transition:color .3s;}
+.footer-link:hover{color:var(--text);}
+.footer-copy{font-family:var(--font-m);font-size:.5rem;letter-spacing:.1em;text-transform:uppercase;color:var(--text-ghost);flex-shrink:0;}
+@media(max-width:700px){.footer-inner{flex-direction:column;text-align:center;gap:1rem;}}
+
+/* Floating Shapes (decorative CSS-only) */
+.float-shapes{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden;}
+.float-shape{position:absolute;border-radius:50%;opacity:.04;animation:floatShape linear infinite;}
+.float-shape:nth-child(1){width:300px;height:300px;background:var(--primary);top:10%;left:-5%;animation-duration:22s;}
+.float-shape:nth-child(2){width:200px;height:200px;background:var(--secondary);bottom:20%;right:-3%;animation-duration:28s;animation-delay:-5s;}
+.float-shape:nth-child(3){width:150px;height:150px;background:var(--accent);top:50%;right:10%;animation-duration:18s;animation-delay:-10s;}
+.float-shape:nth-child(4){width:400px;height:400px;background:var(--primary);bottom:-10%;left:20%;animation-duration:30s;animation-delay:-15s;}
+@keyframes floatShape{0%{transform:translate(0,0) rotate(0deg);}25%{transform:translate(30px,-40px) rotate(90deg);}50%{transform:translate(-20px,20px) rotate(180deg);}75%{transform:translate(40px,30px) rotate(270deg);}100%{transform:translate(0,0) rotate(360deg);}}
+
+/* Card hover lighting (micro-interaction) */
+.feat-card::after,.mode-card::after,.pricing-card::after,.testimonial-card::after,.ws-card::after{content:'';position:absolute;top:var(--mouse-y,0);left:var(--mouse-x,0);width:300px;height:300px;background:radial-gradient(circle, rgba(108,92,231,.06) 0%, transparent 70%);transform:translate(-50%,-50%);pointer-events:none;opacity:0;transition:opacity .3s;z-index:1;border-radius:50%;}
+.feat-card:hover::after,.mode-card:hover::after,.pricing-card:hover::after,.testimonial-card:hover::after,.ws-card:hover::after{opacity:1;}
+.feat-card > *,.mode-card > *,.pricing-card > *,.testimonial-card > *,.ws-card > *{position:relative;z-index:2;}
+
+/* Trail canvas */
+#trail-canvas{position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;}
+
+/* Pinned section marker animation */
+.pin-marker{width:1px;height:60px;background:linear-gradient(to bottom,var(--primary),transparent);margin:0 auto;opacity:.3;}
+
+/* Hero CTA pulse */
+@keyframes ctaPulse{0%,100%{box-shadow:0 0 20px var(--primary-glow);}50%{box-shadow:0 0 40px var(--primary-glow),0 0 60px rgba(108,92,231,.15);}}
+.btn-primary{animation:ctaPulse 3s ease-in-out infinite;}
+@media(max-width:768px){.btn-primary{animation:none;}}
+
+/* Loading shimmer for cards (appears on initial load) */
+.skeleton{background:linear-gradient(90deg,transparent,rgba(255,255,255,.03),transparent);background-size:200% 100%;animation:shimmer 2s infinite;}
+@keyframes shimmer{0%{background-position:-200% 0;}100%{background-position:200% 0;}}
+</style>
+</head>
+<body>
+
+<div id="webgl-canvas"></div>
+<canvas id="trail-canvas"></canvas>
+<div class="cursor-dot" id="cur-dot"></div>
+<div class="cursor-ring" id="cur-ring"></div>
+<div id="pbar"></div>
+<div class="float-shapes"><div class="float-shape"></div><div class="float-shape"></div><div class="float-shape"></div><div class="float-shape"></div></div>
+
+<!-- Loader -->
+<div id="loader">
+  <div class="ld-icon">
+    <svg viewBox="0 0 48 48" fill="none">
+      <circle cx="24" cy="24" r="20" stroke="url(#lg)" stroke-width=".5" opacity=".3"/>
+      <path d="M24 8L28 20L40 24L28 28L24 40L20 28L8 24L20 20L24 8Z" fill="url(#lg)" opacity=".85"/>
+      <defs><linearGradient id="lg" x1="0" y1="0" x2="48" y2="48"><stop offset="0%" stop-color="#6C5CE7"/><stop offset="50%" stop-color="#00D2D3"/><stop offset="100%" stop-color="#FDCB6E"/></linearGradient></defs>
+    </svg>
+  </div>
+  <div class="ld-pct" id="ld-pct">0%</div>
+  <div class="ld-bar-wrap"><div class="ld-bar" id="ld-bar"></div></div>
+  <div class="ld-label">VOOVR — Initializing AI Engine</div>
+</div>
+
+<!-- Navigation -->
+<nav id="nav">
+  <a href="#" class="nav-logo mag">
+    <svg viewBox="0 0 26 26" fill="none">
+      <circle cx="13" cy="13" r="11" stroke="currentColor" stroke-width=".5" opacity=".3"/>
+      <path d="M13 4L15.5 11L23 13L15.5 15L13 22L10.5 15L3 13L10.5 11L13 4Z" fill="currentColor" opacity=".9"/>
+    </svg>
+    VOOV<span>R</span>
+  </a>
+  <div class="nav-links">
+    <a href="#features-wrap" class="nav-link mag">Features</a>
+    <a href="#how-wrap" class="nav-link mag">How It Works</a>
+    <a href="#pricing-wrap" class="nav-link mag">Pricing</a>
+  </div>
+  <a href="#cta-wrap" class="nav-cta mag">Get Early Access</a>
+  <button class="nav-ham mag" id="nav-ham"><span></span><span></span><span></span></button>
+</nav>
+
+<!-- Mobile Drawer -->
+<nav class="nav-drawer" id="drawer">
+  <button class="drawer-close mag" id="drawer-close">CLOSE ✕</button>
+  <a href="#features-wrap" class="mag" onclick="closeDrawer()">Features</a>
+  <a href="#how-wrap" class="mag" onclick="closeDrawer()">How It Works</a>
+  <a href="#pricing-wrap" class="mag" onclick="closeDrawer()">Pricing</a>
+  <a href="#cta-wrap" class="mag" onclick="closeDrawer()">Get Early Access</a>
+</nav>
+
+<div id="smooth-wrapper">
+
+<!-- HERO -->
+<section id="hero" class="container">
+  <div class="hero-content">
+   
+    <h1 class="huge-text">
+      <div class="hero-title-line"><span id="ht1">TURN EVERY</span></div>
+      <div class="hero-title-line"><span id="ht2">CONVERSATION</span></div>
+      <div class="hero-title-line"><span id="ht3" style="color:var(--primary);">INTO KNOWLEDGE.</span></div>
+    </h1>
+    <div class="hero-desc-wrap" id="hero-desc-wrap">
+      <p class="hero-desc">VOOVR transcribes, summarizes, and extracts actionable intelligence from <strong>lectures, meetings, and conversations</strong> — turning spoken words into searchable knowledge.</p>
+      <div class="hero-actions" id="hero-actions">
+        <a href="#cta-wrap" class="btn btn-primary mag">Start Free Trial</a>
+        <a href="#how-wrap" class="btn btn-ghost mag">See How It Works</a>
+      </div>
+    </div>
+  </div>
+ 
+  
+  </div>
+</section>
+
+<!-- STATS -->
+<div id="stats-wrap" class="section-wrap">
+  <div class="stats-grid">
+    <div class="stat-cell blur-reveal"><div class="stat-val" id="stat1">0</div><div class="stat-lbl">Meetings Transcribed<br/>Every Day</div></div>
+    <div class="stat-cell blur-reveal" style="transition-delay:.1s"><div class="stat-val" id="stat2">0</div><div class="stat-lbl">Active Users<br/>Across Globe</div></div>
+    <div class="stat-cell blur-reveal" style="transition-delay:.2s"><div class="stat-val" id="stat3">0</div><div class="stat-lbl">Study Notes Generated<br/>This Month</div></div>
+    <div class="stat-cell blur-reveal" style="transition-delay:.3s"><div class="stat-val" id="stat4">0</div><div class="stat-lbl">Average Accuracy<br/>Rate</div></div>
+  </div>
+</div>
+
+<!-- MARQUEE -->
+<div class="mq section-wrap">
+  <div class="mq-track">
+    <span class="mqi">AI Transcription <span class="mqd"></span></span><span class="mqi">Smart Notes <span class="mqd"></span></span><span class="mqi">Flashcards <span class="mqd"></span></span><span class="mqi">MCQ Generator <span class="mqd"></span></span><span class="mqi">Speaker Detection <span class="mqd"></span></span><span class="mqi">Multi-Language <span class="mqd"></span></span><span class="mqi">Mind Maps <span class="mqd"></span></span><span class="mqi">AI Assistant <span class="mqd"></span></span><span class="mqi">Cloud Sync <span class="mqd"></span></span><span class="mqi">PDF Export <span class="mqd"></span></span><span class="mqi">Action Items <span class="mqd"></span></span><span class="mqi">Knowledge Base <span class="mqd"></span></span>
+    <span class="mqi">AI Transcription <span class="mqd"></span></span><span class="mqi">Smart Notes <span class="mqd"></span></span><span class="mqi">Flashcards <span class="mqd"></span></span><span class="mqi">MCQ Generator <span class="mqd"></span></span><span class="mqi">Speaker Detection <span class="mqd"></span></span><span class="mqi">Multi-Language <span class="mqd"></span></span><span class="mqi">Mind Maps <span class="mqd"></span></span><span class="mqi">AI Assistant <span class="mqd"></span></span><span class="mqi">Cloud Sync <span class="mqd"></span></span><span class="mqi">PDF Export <span class="mqd"></span></span><span class="mqi">Action Items <span class="mqd"></span></span><span class="mqi">Knowledge Base <span class="mqd"></span></span>
+  </div>
+</div>
+
+<!-- FEATURES -->
+<div class="section-wrap glass-bg" id="features-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Platform Capabilities</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(3rem,6vh,5rem);">EVERYTHING AI<br/><span style="color:var(--secondary);">UNLOCKED.</span></h2>
+    <div class="feat-grid">
+      <div class="feat-card mag">
+        <div class="feat-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 8h24M4 16h24M4 24h24"/><circle cx="24" cy="8" r="2" fill="currentColor" opacity=".5"/></svg></div>
+        <h3 class="feat-title">AI Transcription</h3>
+        <p class="feat-desc">Real-time, speaker-aware transcription with 99.7% accuracy across 50+ languages. Upload audio, video, or record live.</p>
+      </div>
+      <div class="feat-card mag">
+        <div class="feat-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 6l16 10L8 26V6z"/></svg></div>
+        <h3 class="feat-title">Smart Study Notes</h3>
+        <p class="feat-desc">Auto-generated structured notes, summaries, flashcards, and MCQs from any lecture or meeting recording.</p>
+      </div>
+      <div class="feat-card mag">
+        <div class="feat-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="16" cy="10" r="6"/><path d="M6 28c0-5.523 4.477-10 10-10s10 4.477 10 10"/></svg></div>
+        <h3 class="feat-title">AI Doubt Solver</h3>
+        <p class="feat-desc">Ask questions about any transcript. VOOVR understands context and provides accurate answers with citations.</p>
+      </div>
+      <div class="feat-card mag">
+        <div class="feat-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M6 6h20v20H6z"/><path d="M16 10v12M10 16h12"/></svg></div>
+        <h3 class="feat-title">AI Meeting Notes</h3>
+        <p class="feat-desc">Automated meeting summaries with action items, key decisions, and follow-ups. Share instantly with your team.</p>
+      </div>
+      <div class="feat-card mag">
+        <div class="feat-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 12l10 10 10-10L12 2z"/><path d="M8 8l4-4"/></svg></div>
+        <h3 class="feat-title">Mind Maps</h3>
+        <p class="feat-desc">Visual knowledge graphs generated from your content. Connect ideas, see relationships, and explore concepts.</p>
+      </div>
+      <div class="feat-card mag">
+        <div class="feat-icon"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M16 4v24M4 16h24"/><circle cx="16" cy="16" r="12"/></svg></div>
+        <h3 class="feat-title">Search Inside Transcript</h3>
+        <p class="feat-desc">Semantic search across every word spoken. Find exact moments, concepts, or topics across your entire library.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- HOW IT WORKS -->
+<div class="section-wrap" id="how-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Simple Workflow</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(3rem,6vh,5rem);">THREE STEPS TO<br/><span style="color:var(--accent);">MASTERY.</span></h2>
+    <div class="how-grid">
+      <div class="how-step blur-reveal mag">
+        <div class="how-n">01</div>
+        <div class="how-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M4 8h24M4 16h24M4 24h24"/><circle cx="32" cy="8" r="4" fill="var(--primary)" opacity=".6"/></svg></div>
+        <h3 class="how-title">Upload or Record</h3>
+        <p class="how-desc">Upload audio/video files, paste a meeting link, or record directly in the browser. VOOVR supports Zoom, Teams, Google Meet, and local files.</p>
+      </div>
+      <div class="how-arrow blur-reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <div class="how-step blur-reveal mag">
+        <div class="how-n">02</div>
+        <div class="how-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.2"><circle cx="20" cy="20" r="16"/><path d="M12 20l6 6 10-10"/></svg></div>
+        <h3 class="how-title">AI Processes</h3>
+        <p class="how-desc">Advanced AI transcribes, detects speakers, analyzes sentiment, extracts key concepts, and generates summaries, notes, and study materials.</p>
+      </div>
+      <div class="how-arrow blur-reveal">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+      </div>
+      <div class="how-step blur-reveal mag">
+        <div class="how-n">03</div>
+        <div class="how-icon"><svg viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="1.2"><path d="M20 8v24M8 20h24"/><circle cx="20" cy="20" r="6" fill="var(--accent)" opacity=".5"/></svg></div>
+        <h3 class="how-title">Access Your Knowledge</h3>
+        <p class="how-desc">Explore transcripts, study notes, flashcards, mind maps, and summaries. Search, share, export to PDF, or sync to your favorite tools.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- MODES: STUDENT + PROFESSIONAL -->
+<div class="section-wrap glass-bg" id="modes-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Two Powerful Modes</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(3rem,6vh,5rem);">AI THAT ADAPTS<br/><span style="color:var(--primary);">TO YOU.</span></h2>
+
+    <!-- Student Mode -->
+    <div class="mode-card mag">
+      <div class="mode-side mode-side-left">
+        <div class="mode-badge">Student Mode</div>
+        <h3 class="mode-title">LEARN<br/>SMARTER.</h3>
+        <p class="mode-desc">Turn every lecture into study-ready materials. Automatic flashcards, MCQs, revision sheets, and key concept extraction.</p>
+        <ul class="mode-list">
+          <li>AI Lecture Transcription</li>
+          <li>Smart Study Notes</li>
+          <li>Flashcard Generator</li>
+          <li>MCQ Creator</li>
+          <li>Revision Sheets</li>
+          <li>AI Doubt Solver</li>
+          <li>Key Concepts Extraction</li>
+          <li>Chat with Your Transcript</li>
+        </ul>
+      </div>
+      <div class="mode-visual" id="mode-visual-student">
+        <div class="mode-glow" style="background:var(--primary-glow)"></div>
+        <div class="mode-grid">
+          <div class="mode-grid-item"><span class="mg-label">Lecture Notes</span><div class="mg-bar" style="width:92%"></div></div>
+          <div class="mode-grid-item"><span class="mg-label">Flashcards</span><div class="mg-bar" style="width:78%"></div></div>
+          <div class="mode-grid-item"><span class="mg-label">MCQs</span><div class="mg-bar" style="width:85%"></div></div>
+          <div class="mode-grid-item"><span class="mg-label">Summary</span><div class="mg-bar" style="width:95%"></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Professional Mode -->
+    <div class="mode-card mag" style="margin-top:3rem;flex-direction:row-reverse;">
+      <div class="mode-side mode-side-right">
+        <div class="mode-badge" style="border-color:var(--secondary);color:var(--secondary);">Professional Mode</div>
+        <h3 class="mode-title">WORK<br/>FASTER.</h3>
+        <p class="mode-desc">Meeting transcription, action items, and decision tracking. Turn conversations into documented outcomes.</p>
+        <ul class="mode-list">
+          <li>Meeting Transcription</li>
+          <li>Speaker Detection</li>
+          <li>Action Items Auto-Capture</li>
+          <li>Meeting Summaries</li>
+          <li>PDF Export</li>
+          <li>AI Assistant</li>
+          <li>Cloud Sync</li>
+          <li>Knowledge Base</li>
+        </ul>
+      </div>
+      <div class="mode-visual" id="mode-visual-pro">
+        <div class="mode-glow" style="background:var(--secondary-glow)"></div>
+        <div class="mode-chat">
+          <div class="mode-msg mode-msg-in"><span class="msg-speaker">Sarah K.</span><span class="msg-text">Q3 revenue targets are looking strong. We should increase the marketing budget by 15%.</span></div>
+          <div class="mode-msg mode-msg-out"><span class="msg-speaker">AI Action</span><span class="msg-text">Action: Revise Q3 marketing budget — increase by 15%. Owner: Sarah K. Due: Aug 15.</span></div>
+          <div class="mode-msg mode-msg-in"><span class="msg-speaker">Marcus J.</span><span class="msg-text">I'll need engineering to allocate two sprints for the platform migration.</span></div>
+          <div class="mode-msg mode-msg-out"><span class="msg-speaker">AI Action</span><span class="msg-text">Action: Allocate 2 sprints for platform migration. Owner: Marcus J. Due: Sep 1.</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- AI WORKSPACE -->
+<div class="section-wrap" id="workspace-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Unified Workspace</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(2rem,4vh,3rem);">YOUR AI<br/><span style="color:var(--accent);">COMMAND CENTER.</span></h2>
+    <p class="workspace-lede blur-reveal">One dashboard to manage all your transcripts, notes, mind maps, and knowledge base. Search everything, ask anything.</p>
+    <div class="workspace-grid">
+      <div class="ws-card mag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+        <span>Transcript Library</span>
+      </div>
+      <div class="ws-card mag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 6v12M6 12h12"/></svg>
+        <span>Knowledge Base</span>
+      </div>
+      <div class="ws-card mag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <span>AI Assistant</span>
+      </div>
+      <div class="ws-card mag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M4 4h16v16H4z"/><path d="M8 8h8v8H8z"/></svg>
+        <span>Mind Maps</span>
+      </div>
+      <div class="ws-card mag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        <span>Export & Sync</span>
+      </div>
+      <div class="ws-card mag">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 20h9M16.5 3.5a2.121 2.121 0 013 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+        <span>Smart Notes Editor</span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- PRICING -->
+<div class="section-wrap glass-bg" id="pricing-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Simple Pricing</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(3rem,6vh,5rem);">ONE PLAN,<br/><span style="color:var(--primary);">FULL POWER.</span></h2>
+    <div class="pricing-grid">
+      <div class="pricing-card pricing-card-free mag">
+        <div class="pricing-top">
+          <div class="pricing-name">Starter</div>
+          <div class="pricing-price"><span class="pp-currency">$</span><span class="pp-val">0</span></div>
+          <div class="pricing-period">Free forever</div>
+        </div>
+        <ul class="pricing-features">
+          <li>5 transcription hours / month</li>
+          <li>Basic summaries</li>
+          <li>1 user</li>
+          <li>Export to PDF</li>
+          <li>48-hour processing</li>
+        </ul>
+        <a href="#cta-wrap" class="btn btn-ghost mag" style="width:100%;justify-content:center;">Get Started</a>
+      </div>
+      <div class="pricing-card pricing-card-pro mag">
+        <div class="pricing-popular">Most Popular</div>
+        <div class="pricing-top">
+          <div class="pricing-name">Pro</div>
+          <div class="pricing-price"><span class="pp-currency">$</span><span class="pp-val">19</span></div>
+          <div class="pricing-period">per month, billed annually</div>
+        </div>
+        <ul class="pricing-features">
+          <li>100 transcription hours / month</li>
+          <li>Full AI suite (notes, flashcards, MCQs)</li>
+          <li>5 team members</li>
+          <li>Voice & video upload</li>
+          <li>Real-time processing</li>
+          <li>Speaker detection</li>
+          <li>AI Assistant & Chat</li>
+          <li>Cloud sync & export</li>
+        </ul>
+        <a href="#cta-wrap" class="btn btn-primary mag" style="width:100%;justify-content:center;">Start Free Trial</a>
+      </div>
+      <div class="pricing-card pricing-card-enterprise mag">
+        <div class="pricing-top">
+          <div class="pricing-name">Enterprise</div>
+          <div class="pricing-price"><span class="pp-currency">$</span><span class="pp-val">49</span></div>
+          <div class="pricing-period">per month, billed annually</div>
+        </div>
+        <ul class="pricing-features">
+          <li>Unlimited transcription</li>
+          <li>All Pro features</li>
+          <li>Unlimited team members</li>
+          <li>API access</li>
+          <li>Custom integrations</li>
+          <li>Dedicated support</li>
+          <li>On-premise option</li>
+          <li>SLA guarantee</li>
+        </ul>
+        <a href="#cta-wrap" class="btn btn-ghost mag" style="width:100%;justify-content:center;">Contact Sales</a>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- FAQ -->
+<div class="section-wrap" id="faq-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Questions?</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(3rem,6vh,5rem);">WE HAVE<br/><span style="color:var(--secondary);">ANSWERS.</span></h2>
+    <div class="faq-list blur-reveal">
+      <div class="faq-item mag">
+        <button class="faq-q">What file formats does VOOVR support?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="faq-a"><p>VOOVR supports MP3, WAV, MP4, MOV, M4A, and direct integration with Zoom, Google Meet, and Microsoft Teams. You can also record directly in your browser.</p></div>
+      </div>
+      <div class="faq-item mag">
+        <button class="faq-q">How accurate is the transcription?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="faq-a"><p>VOOVR achieves 99.7% accuracy for clear audio in supported languages. Accuracy varies with audio quality, background noise, and accents. Our AI improves over time.</p></div>
+      </div>
+      <div class="faq-item mag">
+        <button class="faq-q">Can I use VOOVR for both meetings and studying?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="faq-a"><p>Yes! VOOVR has two modes: Student Mode for lectures and study materials, and Professional Mode for meetings, action items, and team collaboration. Switch freely.</p></div>
+      </div>
+      <div class="faq-item mag">
+        <button class="faq-q">Is my data secure and private?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="faq-a"><p>All audio and transcript data is encrypted at rest and in transit. We never share your data with third parties. Enterprise customers can request on-premise deployment.</p></div>
+      </div>
+      <div class="faq-item mag">
+        <button class="faq-q">What languages does VOOVR support?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="faq-a"><p>VOOVR supports 50+ languages including English, Spanish, French, German, Chinese, Japanese, Hindi, Arabic, Portuguese, and more. We add new languages regularly.</p></div>
+      </div>
+      <div class="faq-item mag">
+        <button class="faq-q">Can I export my transcripts and notes?<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg></button>
+        <div class="faq-a"><p>Yes, export to PDF, Markdown, TXT, SRT (subtitles), and DOCX. You can also sync to Notion, Obsidian, Google Docs, and more via our API.</p></div>
+      </div>
+    </div>
+  </section>
+</div>
+
+<!-- TESTIMONIALS -->
+<div class="section-wrap glass-bg" id="testimonials-wrap">
+  <section class="section container">
+    <div class="eyebrow blur-reveal">Trusted by Thousands</div>
+    <h2 class="huge-text blur-reveal" style="margin-bottom:clamp(3rem,6vh,4rem);">WHAT USERS<br/><span style="color:var(--accent);">SAY.</span></h2>
+    <div class="testimonial-grid" id="testimonial-grid">
+      <div class="testimonial-card mag">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"VOOVR completely transformed how I study. The AI-generated flashcards and MCQs save me hours every week. My grades have never been better."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--primary),var(--secondary))">AK</div>
+          <div><div class="testimonial-name">Anika K.</div><div class="testimonial-role">Computer Science Student</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card mag">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"Our team runs 20+ hours of meetings weekly. VOOVR's action item detection alone has saved us from countless follow-up emails. Indispensable."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--secondary),var(--accent))">MR</div>
+          <div><div class="testimonial-name">Marcus R.</div><div class="testimonial-role">Product Manager, Stripe</div></div>
+        </div>
+      </div>
+      <div class="testimonial-card mag">
+        <div class="testimonial-stars">★★★★★</div>
+        <p class="testimonial-text">"The mind maps and key concept extraction are incredible. I can review an entire semester's worth of lectures in under an hour. Game changing."</p>
+        <div class="testimonial-author">
+          <div class="testimonial-avatar" style="background:linear-gradient(135deg,var(--accent),var(--primary))">JL</div>
+          <div><div class="testimonial-name">Dr. Jennifer L.</div><div class="testimonial-role">Professor, MIT</div></div>
+        </div>
+      </div>
+    </div>
+    <div class="testimonial-cta blur-reveal">
+      <a href="#cta-wrap" class="btn btn-ghost mag">Read More Stories</a>
+    </div>
+  </section>
+</div>
+
+<!-- CTA -->
+<div class="section-wrap" id="cta-wrap">
+  <section class="section container">
+    <div class="cta-card blur-reveal">
+      <div class="cta-glow"></div>
+      <div class="eyebrow" style="justify-content:center;color:var(--accent);">Get Early Access</div>
+      <h2 class="huge-text" style="text-align:center;font-size:clamp(2.8rem,8vw,7rem);">READY TO TURN<br/><span style="color:var(--secondary);">NOISE INTO KNOWLEDGE?</span></h2>
+      <p class="cta-desc">Join 12,000+ students and professionals already using VOOVR. Start free, no credit card required.</p>
+      <div class="cta-form-wrap">
+        <form class="cta-form" id="cta-form">
+          <input type="email" placeholder="Enter your email" class="cta-input" required/>
+          <button type="submit" class="btn btn-primary mag" style="border-radius:8px;flex-shrink:0;">Get Started Free</button>
+        </form>
+        <p class="cta-footnote">No credit card. Free tier includes 5 hours of transcription.</p>
+      </div>
+    </div>
+  </section>
+</div>
+
+</div><!-- end smooth-wrapper -->
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-inner">
+    <div class="footer-brand">
+      <svg viewBox="0 0 26 26" fill="none" style="width:20px;height:20px;">
+        <circle cx="13" cy="13" r="11" stroke="currentColor" stroke-width=".5" opacity=".3"/>
+        <path d="M13 4L15.5 11L23 13L15.5 15L13 22L10.5 15L3 13L10.5 11L13 4Z" fill="currentColor" opacity=".9"/>
+      </svg>
+      VOOV<span style="color:var(--accent);">R</span>
+    </div>
+    <div class="footer-links">
+      <a href="#" class="footer-link mag">Privacy</a>
+      <a href="#" class="footer-link mag">Terms</a>
+      <a href="#" class="footer-link mag">Security</a>
+      <a href="#" class="footer-link mag">Docs</a>
+      <a href="#" class="footer-link mag">API</a>
+    </div>
+    <div class="footer-copy">© 2026 VOOVR. All rights reserved.</div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/postprocessing/EffectComposer.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/postprocessing/RenderPass.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/postprocessing/ShaderPass.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/postprocessing/UnrealBloomPass.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/shaders/LuminosityHighPassShader.js"></script>
+<script src="https://unpkg.com/three@0.134.0/examples/js/shaders/CopyShader.js"></script>
+<script src="https://unpkg.com/@studio-freight/lenis@1.0.34/dist/lenis.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+<script>
+/* ─────────────────────────────────────────────
+   VOOVR — Main Application JavaScript
+   ───────────────────────────────────────────── */
+
+// ===== 1. LOADER =====
+let prog = 0;
+const ldPct = document.getElementById('ld-pct');
+const ldBar = document.getElementById('ld-bar');
+const ldIntvl = setInterval(() => {
+  prog += Math.floor(Math.random() * 12) + 5;
+  if (prog >= 100) { prog = 100; clearInterval(ldIntvl); }
+  ldPct.textContent = prog + '%';
+  ldBar.style.width = prog + '%';
+  if (prog === 100) {
+    setTimeout(() => {
+      gsap.to('#loader', { yPercent: -100, duration: 1.4, ease: 'power4.inOut', onComplete: () => {
+        document.getElementById('loader').classList.add('gone');
+        initHeroAnim();
+      }});
+    }, 300);
+  }
+}, 60);
+
+// ===== 2. LENIS =====
+const lenis = new Lenis({ duration: 1.3, easing: t => Math.min(1, 1.001 - Math.pow(2, -10 * t)), smooth: true });
+function raf(time) { lenis.raf(time); requestAnimationFrame(raf); }
+requestAnimationFrame(raf);
+
+document.querySelectorAll('a[href^="#"]').forEach(a => {
+  a.addEventListener('click', e => {
+    e.preventDefault();
+    const t = a.getAttribute('href');
+    if (t === '#') { lenis.scrollTo(0); return; }
+    const el = document.querySelector(t);
+    if (el) lenis.scrollTo(el, { offset: -72, duration: 1.4 });
+  });
+});
+
+// ===== 3. CURSOR + MAGNETIC =====
+const dot = document.getElementById('cur-dot');
+const ring = document.getElementById('cur-ring');
+let mx = window.innerWidth/2, my = window.innerHeight/2, rx = mx, ry = my;
+
+window.addEventListener('mousemove', e => {
+  mx = e.clientX; my = e.clientY;
+  dot.style.transform = `translate(${mx}px,${my}px) translate(-50%,-50%)`;
+}, { passive: true });
+(function cursorLoop() {
+  rx += (mx - rx) * 0.14; ry += (my - ry) * 0.14;
+  ring.style.transform = `translate(${rx}px,${ry}px) translate(-50%,-50%)`;
+  requestAnimationFrame(cursorLoop);
+})();
+
+document.querySelectorAll('.mag').forEach(el => {
+  el.addEventListener('mouseenter', () => document.body.classList.add('hovering'));
+  el.addEventListener('mouseleave', () => document.body.classList.remove('hovering'));
+});
+
+document.querySelectorAll('.btn').forEach(btn => {
+  btn.addEventListener('mousemove', e => {
+    const r = btn.getBoundingClientRect();
+    gsap.to(btn, { x: (e.clientX - r.left - r.width/2) * 0.3, y: (e.clientY - r.top - r.height/2) * 0.3, duration: 0.3, ease: 'power2.out' });
+  });
+  btn.addEventListener('mouseleave', () => gsap.to(btn, { x: 0, y: 0, duration: 0.7, ease: 'elastic.out(1,0.3)' }));
+});
+
+// ===== 4. CURSOR TRAIL =====
+(function() {
+  const tc = document.getElementById('trail-canvas');
+  if (!tc) return;
+  const ctx = tc.getContext('2d');
+  tc.width = window.innerWidth; tc.height = window.innerHeight;
+  window.addEventListener('resize', () => { tc.width = window.innerWidth; tc.height = window.innerHeight; });
+  tc.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:1;pointer-events:none;';
+
+  const trail = [];
+  const MAX = 30;
+  let tmx = -200, tmy = -200;
+  window.addEventListener('mousemove', e => { tmx = e.clientX; tmy = e.clientY; }, { passive: true });
+
+  function drawTrail() {
+    trail.push({ x: tmx, y: tmy, life: 1 });
+    if (trail.length > MAX) trail.shift();
+    ctx.clearRect(0, 0, tc.width, tc.height);
+    trail.forEach((p, i) => {
+      p.life -= 0.035;
+      if (p.life <= 0) return;
+      const r = (i / trail.length) * 3.5;
+      const a = p.life * 0.3;
+      const hue = 250 + (i / MAX) * 60;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, r, 0, Math.PI * 2);
+      ctx.fillStyle = `hsla(${hue},80%,65%,${a})`;
+      ctx.fill();
+    });
+    requestAnimationFrame(drawTrail);
+  }
+  drawTrail();
+})();
+
+// ===== 5. NAV SCROLL + MOBILE =====
+const nav = document.getElementById('nav');
+const pbar = document.getElementById('pbar');
+lenis.on('scroll', ({ scroll, progress }) => {
+  nav.classList.toggle('scrolled', scroll > 40);
+  pbar.style.width = (progress * 100) + '%';
+});
+const drawer = document.getElementById('drawer');
+document.getElementById('nav-ham').addEventListener('click', () => drawer.classList.add('open'));
+document.getElementById('drawer-close').addEventListener('click', () => drawer.classList.remove('open'));
+function closeDrawer() { drawer.classList.remove('open'); }
+
+// ===== 6. GSAP + SCROLLTRIGGER =====
+gsap.registerPlugin(ScrollTrigger);
+ScrollTrigger.scrollerProxy(document.body, {
+  scrollTop(v) { return arguments.length ? lenis.scrollTo(v) : lenis.scroll; },
+  getBoundingClientRect() { return { top: 0, left: 0, width: window.innerWidth, height: window.innerHeight }; }
+});
+lenis.on('scroll', ScrollTrigger.update);
+
+// Blur reveals
+gsap.utils.toArray('.blur-reveal').forEach(el => {
+  ScrollTrigger.create({
+    trigger: el, start: 'top 88%',
+    onEnter: () => gsap.to(el, { opacity: 1, filter: 'blur(0px)', y: 0, scale: 1, duration: 1.6, ease: 'power4.out' })
+  });
+});
+
+// Hero animation
+function initHeroAnim() {
+  const spans = [document.getElementById('ht1'), document.getElementById('ht2'), document.getElementById('ht3')];
+  spans.forEach((s, i) => {
+    if (!s) return;
+    gsap.to(s, { y: 0, opacity: 1, duration: 1.2, delay: i * 0.18, ease: 'power4.out' });
+  });
+  gsap.to('#hero-desc-wrap', { opacity: 1, duration: 1, delay: 0.7, ease: 'power3.out' });
+  gsap.to('#hero-actions', { opacity: 1, duration: 1, delay: 0.9, ease: 'power3.out' });
+  gsap.to('#hero-strip', { opacity: 1, duration: 1, delay: 1.2, ease: 'power3.out' });
+}
+
+// Stats count-up
+ScrollTrigger.create({
+  trigger: '#stats-wrap', start: 'top 80%', once: true,
+  onEnter: () => {
+    const targets = [
+      { el: document.getElementById('stat1'), val: 284000, suffix: '+' },
+      { el: document.getElementById('stat2'), val: 12000, suffix: '+' },
+      { el: document.getElementById('stat3'), val: 1850000, suffix: '+' },
+      { el: document.getElementById('stat4'), val: 997, suffix: '', fmt: v => (v/10).toFixed(1) + '%' }
+    ];
+    targets.forEach(t => {
+      if (!t.el) return;
+      const obj = { v: 0 };
+      gsap.to(obj, {
+        v: t.val, duration: 2.2, ease: 'power2.out',
+        onUpdate: () => { t.el.textContent = t.fmt ? t.fmt(obj.v) : Math.round(obj.v).toLocaleString() + (t.suffix || ''); }
+      });
+    });
+  }
+});
+
+// FAQ accordion
+document.querySelectorAll('.faq-q').forEach(btn => {
+  btn.addEventListener('click', () => {
+    const item = btn.closest('.faq-item');
+    const isOpen = item.classList.contains('faq-open');
+    document.querySelectorAll('.faq-item.faq-open').forEach(el => {
+      el.classList.remove('faq-open');
+      gsap.to(el.querySelector('.faq-a'), { height: 0, duration: 0.4, ease: 'power3.inOut' });
+      gsap.to(el.querySelector('.faq-q svg'), { rotate: 0, duration: 0.3 });
+    });
+    if (!isOpen) {
+      item.classList.add('faq-open');
+      const a = item.querySelector('.faq-a');
+      gsap.set(a, { height: 'auto' });
+      const h = a.offsetHeight;
+      gsap.set(a, { height: 0 });
+      gsap.to(a, { height: h, duration: 0.5, ease: 'power3.out' });
+      gsap.to(item.querySelector('.faq-q svg'), { rotate: 180, duration: 0.3 });
+    }
+  });
+});
+
+// Section divider lines
+document.querySelectorAll('.section-wrap').forEach((wrap, i) => {
+  if (i === 0) return;
+  const line = document.createElement('div');
+  line.style.cssText = `position:absolute;top:0;left:0;right:0;height:1px;z-index:2;background:linear-gradient(90deg,transparent 0%,rgba(108,92,231,.5) 25%,rgba(0,210,211,.7) 75%,transparent 100%);transform:scaleX(0);transform-origin:left;pointer-events:none;`;
+  wrap.style.position = 'relative';
+  wrap.prepend(line);
+  ScrollTrigger.create({
+    trigger: wrap, start: 'top 92%', once: true,
+    onEnter: () => gsap.to(line, { scaleX: 1, duration: 1.2, ease: 'power3.out' })
+  });
+});
+
+// Headings scramble effect
+const CHARS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ01';
+document.querySelectorAll('.huge-text').forEach(heading => {
+  if (heading.closest('#hero')) return;
+  const spans = heading.querySelectorAll('span');
+  ScrollTrigger.create({
+    trigger: heading, start: 'top 82%', once: true,
+    onEnter: () => spans.forEach(s => {
+      const original = s.textContent;
+      let frame = 0, total = 16;
+      const id = setInterval(() => {
+        s.textContent = original.split('').map((ch, i) => {
+          if (ch === ' ' || ch === '\n') return ch;
+          if (frame / total > i / original.length) return ch;
+          return CHARS[Math.floor(Math.random() * CHARS.length)];
+        }).join('');
+        frame++;
+        if (frame > total) { s.textContent = original; clearInterval(id); }
+      }, 40);
+    })
+  });
+});
+
+// Card mouse tracking for hover lighting
+document.querySelectorAll('.feat-card, .mode-card, .pricing-card, .testimonial-card, .ws-card').forEach(card => {
+  card.addEventListener('mousemove', e => {
+    const r = card.getBoundingClientRect();
+    card.style.setProperty('--mouse-x', (e.clientX - r.left) + 'px');
+    card.style.setProperty('--mouse-y', (e.clientY - r.top) + 'px');
+  });
+});
+
+// Form handling
+document.getElementById('cta-form')?.addEventListener('submit', function(e) {
+  e.preventDefault();
+  const input = this.querySelector('.cta-input');
+  const btn = this.querySelector('button');
+  const originalText = btn.textContent;
+  btn.textContent = 'Joining...';
+  btn.disabled = true;
+  gsap.to(btn, { scale: 0.95, duration: 0.15, ease: 'power2.out', yoyo: true, repeat: 1 });
+  setTimeout(() => {
+    btn.textContent = '✓ You\'re In!';
+    btn.style.background = 'linear-gradient(135deg, #00D2D3, #00B894)';
+    input.value = '';
+    gsap.to(btn, { scale: [0.95, 1.05, 1], duration: 0.4, ease: 'power2.out' });
+    setTimeout(() => {
+      btn.textContent = originalText;
+      btn.style.background = '';
+      btn.disabled = false;
+    }, 3000);
+  }, 1200);
+});
+
+// Additional scroll-triggered micro-animations
+gsap.utils.toArray('.feat-card').forEach((card, i) => {
+  ScrollTrigger.create({
+    trigger: card, start: 'top 85%',
+    onEnter: () => gsap.to(card, { opacity: 1, y: 0, duration: 0.8, delay: i * 0.08, ease: 'power3.out' })
+  });
+  gsap.set(card, { opacity: 0, y: 30 });
+});
+
+gsap.utils.toArray('.testimonial-card').forEach((card, i) => {
+  ScrollTrigger.create({
+    trigger: card, start: 'top 85%',
+    onEnter: () => gsap.to(card, { opacity: 1, y: 0, duration: 0.8, delay: i * 0.1, ease: 'power3.out' })
+  });
+  gsap.set(card, { opacity: 0, y: 30 });
+});
+
+gsap.utils.toArray('.pricing-card').forEach((card, i) => {
+  ScrollTrigger.create({
+    trigger: card, start: 'top 85%',
+    onEnter: () => gsap.to(card, { opacity: 1, y: 0, duration: 0.8, delay: i * 0.1, ease: 'power3.out' })
+  });
+  gsap.set(card, { opacity: 0, y: 40 });
+});
+
+// Workspace cards staggered entrance
+gsap.utils.toArray('.ws-card').forEach((card, i) => {
+  ScrollTrigger.create({
+    trigger: '.workspace-grid', start: 'top 80%',
+    onEnter: () => gsap.to(card, { opacity: 1, y: 0, duration: 0.6, delay: i * 0.06, ease: 'power3.out' })
+  });
+  gsap.set(card, { opacity: 0, y: 20 });
+});
+
+// Mode card entrance
+gsap.utils.toArray('.mode-card').forEach((card, i) => {
+  ScrollTrigger.create({
+    trigger: card, start: 'top 80%',
+    onEnter: () => gsap.to(card, { opacity: 1, y: 0, duration: 1, delay: i * 0.15, ease: 'power4.out' })
+  });
+  gsap.set(card, { opacity: 0, y: 60 });
+});
+
+// Marquee bars animation in student mode visual
+ScrollTrigger.create({
+  trigger: '#mode-visual-student', start: 'top 80%', once: true,
+  onEnter: () => {
+    gsap.utils.toArray('#mode-visual-student .mg-bar').forEach((bar, i) => {
+      const w = bar.style.width;
+      gsap.set(bar, { width: '0%' });
+      gsap.to(bar, { width: w, duration: 1.2, delay: i * 0.15, ease: 'power3.out' });
+    });
+  }
+});
+
+// Chat messages sequential reveal in professional mode
+ScrollTrigger.create({
+  trigger: '#mode-visual-pro', start: 'top 80%', once: true,
+  onEnter: () => {
+    gsap.utils.toArray('#mode-visual-pro .mode-msg').forEach((msg, i) => {
+      gsap.fromTo(msg, { opacity: 0, x: i % 2 === 0 ? -20 : 20, filter: 'blur(6px)' },
+        { opacity: 1, x: 0, filter: 'blur(0px)', duration: 0.8, delay: i * 0.25, ease: 'power3.out' }
+      );
+    });
+  }
+});
+
+// Smooth appearance for CTA card
+ScrollTrigger.create({
+  trigger: '#cta-wrap', start: 'top 85%',
+  onEnter: () => gsap.to('.cta-card', { opacity: 1, y: 0, scale: 1, duration: 1.2, ease: 'power4.out' })
+});
+gsap.set('.cta-card', { opacity: 0, y: 60, scale: 0.98 });
+
+// ===== 7. THREE.JS SCENE =====
+const webglEl = document.getElementById('webgl-canvas');
+const scene = new THREE.Scene();
+scene.fog = new THREE.FogExp2(0x05050A, 0.025);
+
+const camera = new THREE.PerspectiveCamera(45, innerWidth/innerHeight, 0.1, 120);
+camera.position.set(0, 1, 10);
+
+const renderer = new THREE.WebGLRenderer({ alpha: true, antialias: false, powerPreference: 'high-performance' });
+renderer.setSize(innerWidth, innerHeight);
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+renderer.outputEncoding = THREE.sRGBEncoding;
+webglEl.appendChild(renderer.domElement);
+
+// Post-processing
+const renderPass = new THREE.RenderPass(scene, camera);
+const bloom = new THREE.UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 1.2, 0.7, 0.15);
+bloom.threshold = 0; bloom.strength = 0.85; bloom.radius = 0.4;
+
+const composer = new THREE.EffectComposer(renderer);
+composer.addPass(renderPass);
+composer.addPass(bloom);
+
+// Aberration pass
+const AbberShader = {
+  uniforms: { tDiffuse: { value: null }, uTime: { value: 0 }, uAmt: { value: 0.0018 } },
+  vertexShader: `varying vec2 vUv;void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader: `
+    uniform sampler2D tDiffuse;uniform float uTime;uniform float uAmt;varying vec2 vUv;
+    void main(){
+      vec2 d=(vUv-.5)*2.*uAmt;
+      float r=texture2D(tDiffuse,vUv+d).r;
+      float g=texture2D(tDiffuse,vUv).g;
+      float b=texture2D(tDiffuse,vUv-d).b;
+      float len=length(vUv-.5);
+      vec3 col=vec3(r,g,b)*smoothstep(.75,.1,len);
+      gl_FragColor=vec4(col,texture2D(tDiffuse,vUv).a);
+    }`
+};
+const abberPass = new THREE.ShaderPass(AbberShader);
+composer.addPass(abberPass);
+
+// Lights
+const dL1 = new THREE.DirectionalLight(0x6C5CE7, 2.5); dL1.position.set(5, 5, 3); scene.add(dL1);
+const dL2 = new THREE.DirectionalLight(0x00D2D3, 2); dL2.position.set(-5, -4, -3); scene.add(dL2);
+const dL3 = new THREE.DirectionalLight(0xFDCB6E, 1.5); dL3.position.set(0, 8, 5); scene.add(dL3);
+const aL = new THREE.AmbientLight(0x05050A, 0.6); scene.add(aL);
+
+// ===== CENTRAL AI CORE =====
+// A toroidal structure with flowing energy — represents AI processing
+const coreGroup = new THREE.Group();
+
+// Main ring
+const coreRingGeo = new THREE.TorusGeometry(2.6, 0.04, 32, 128);
+const coreRingMat = new THREE.MeshBasicMaterial({
+  color: 0x6C5CE7, transparent: true, opacity: 0.7, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const coreRing = new THREE.Mesh(coreRingGeo, coreRingMat);
+coreGroup.add(coreRing);
+
+// Second ring (perpendicular)
+const coreRing2Geo = new THREE.TorusGeometry(2.6, 0.03, 32, 128);
+const coreRing2Mat = new THREE.MeshBasicMaterial({
+  color: 0x00D2D3, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const coreRing2 = new THREE.Mesh(coreRing2Geo, coreRing2Mat);
+coreRing2.rotation.x = Math.PI / 2;
+coreRing2.rotation.z = Math.PI / 3;
+coreGroup.add(coreRing2);
+
+// Inner glow sphere
+const glowGeo = new THREE.SphereGeometry(0.8, 32, 32);
+const glowMat = new THREE.MeshBasicMaterial({
+  color: 0x6C5CE7, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending, depthWrite: false
+});
+const glowSphere = new THREE.Mesh(glowGeo, glowMat);
+coreGroup.add(glowSphere);
+
+// Energy particles orbiting the core
+const orbCount = 80;
+const orbPositions = new Float32Array(orbCount * 3);
+const orbData = [];
+for (let i = 0; i < orbCount; i++) {
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const r = 2.8 + Math.random() * 1.2;
+  orbPositions[i*3] = r * Math.sin(phi) * Math.cos(theta);
+  orbPositions[i*3+1] = r * Math.sin(phi) * Math.sin(theta);
+  orbPositions[i*3+2] = r * Math.cos(phi);
+  orbData.push({ theta, phi, r, speed: 0.3 + Math.random() * 0.5, offset: Math.random() * Math.PI * 2 });
+}
+const orbGeo = new THREE.BufferGeometry();
+orbGeo.setAttribute('position', new THREE.BufferAttribute(orbPositions, 3));
+const orbMat = new THREE.PointsMaterial({
+  size: 0.045, color: 0xFDCB6E, transparent: true, opacity: 0.8,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const orbPoints = new THREE.Points(orbGeo, orbMat);
+coreGroup.add(orbPoints);
+
+// Data streams — lines that connect inner to outer
+const streamGroup = new THREE.Group();
+for (let i = 0; i < 24; i++) {
+  const angle = (i / 24) * Math.PI * 2;
+  const rInner = 1.0;
+  const rOuter = 3.0;
+  const points = [];
+  for (let t = 0; t <= 1; t += 0.04) {
+    const r = rInner + (rOuter - rInner) * t;
+    const a = angle + t * 0.3;
+    const yOff = Math.sin(t * Math.PI * 3) * 0.3;
+    points.push(new THREE.Vector3(
+      Math.cos(a) * r,
+      Math.sin(a) * r + yOff,
+      Math.sin(a * 0.5) * 0.2
+    ));
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(points);
+  const m = new THREE.LineBasicMaterial({
+    color: i % 3 === 0 ? 0x6C5CE7 : i % 3 === 1 ? 0x00D2D3 : 0xFDCB6E,
+    transparent: true, opacity: 0.12 + Math.random() * 0.12,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const line = new THREE.Line(g, m);
+  streamGroup.add(line);
+}
+coreGroup.add(streamGroup);
+
+coreGroup.position.set(0, 0, -2);
+scene.add(coreGroup);
+
+// ===== KNOWLEDGE NODES (floating geometric shapes) =====
+const nodeGroup = new THREE.Group();
+const nodeShapes = [
+  new THREE.IcosahedronGeometry(0.4, 0),
+  new THREE.OctahedronGeometry(0.35, 0),
+  new THREE.TetrahedronGeometry(0.45, 0)
+];
+const nodeCount = 30;
+const nodeData = [];
+for (let i = 0; i < nodeCount; i++) {
+  const shape = nodeShapes[i % 3];
+  const color = i % 3 === 0 ? 0x6C5CE7 : i % 3 === 1 ? 0x00D2D3 : 0xFDCB6E;
+  const mat = new THREE.MeshStandardMaterial({
+    color, roughness: 0.1, metalness: 0.95, transparent: true, opacity: 0.15 + Math.random() * 0.2
+  });
+  const mesh = new THREE.Mesh(shape, mat);
+  const theta = Math.random() * Math.PI * 2;
+  const phi = Math.acos(2 * Math.random() - 1);
+  const r = 5 + Math.random() * 4;
+  mesh.position.set(
+    r * Math.sin(phi) * Math.cos(theta),
+    r * Math.cos(phi) * 0.6,
+    r * Math.sin(phi) * Math.sin(theta) - 3
+  );
+  const s = 0.4 + Math.random() * 0.8;
+  mesh.scale.setScalar(s);
+  nodeGroup.add(mesh);
+  nodeData.push({
+    mesh, rotSpeedX: (Math.random() - 0.5) * 0.015,
+    rotSpeedY: (Math.random() - 0.5) * 0.02,
+    floatAmp: 0.05 + Math.random() * 0.1,
+    floatPhase: Math.random() * Math.PI * 2,
+    basePos: mesh.position.clone()
+  });
+}
+scene.add(nodeGroup);
+
+// ===== AUDIO WAVE VISUALIZATION =====
+// A large waveform structure below the core
+const waveGroup = new THREE.Group();
+const waveCount = 80;
+const wavePoints = [];
+for (let i = 0; i <= waveCount; i++) {
+  const t = (i / waveCount) * Math.PI * 4;
+  const x = (i / waveCount - 0.5) * 12;
+  wavePoints.push(new THREE.Vector3(x, 0, 0));
+}
+const waveGeo = new THREE.BufferGeometry().setFromPoints(wavePoints);
+const waveMat = new THREE.LineBasicMaterial({
+  color: 0x6C5CE7, transparent: true, opacity: 0.08,
+  blending: THREE.AdditiveBlending, depthWrite: false
+});
+const waveLine = new THREE.Line(waveGeo, waveMat);
+waveGroup.add(waveLine);
+
+// Additional wave lines for depth
+for (let j = 0; j < 6; j++) {
+  const pts = [];
+  for (let i = 0; i <= waveCount; i++) {
+    const t = (i / waveCount) * Math.PI * 4;
+    const x = (i / waveCount - 0.5) * 12;
+    const z = (j - 3) * 0.5;
+    pts.push(new THREE.Vector3(x, 0, z));
+  }
+  const g = new THREE.BufferGeometry().setFromPoints(pts);
+  const m = new THREE.LineBasicMaterial({
+    color: j % 2 === 0 ? 0x6C5CE7 : 0x00D2D3,
+    transparent: true, opacity: 0.04, blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  waveGroup.add(new THREE.Line(g, m));
+}
+waveGroup.position.set(0, -2.5, -3);
+scene.add(waveGroup);
+
+// ===== BACKGROUND PARTICLES =====
+function makeParticles(count, spread, size, col, opa) {
+  const arr = new Float32Array(count * 3);
+  for (let i = 0; i < count * 3; i++) arr[i] = (Math.random() - 0.5) * spread;
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.BufferAttribute(arr, 3));
+  const m = new THREE.PointsMaterial({
+    size, color: col, transparent: true, opacity: opa,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  return new THREE.Points(g, m);
+}
+const pts1 = makeParticles(1200, 60, 0.035, 0xF0F0F5, 0.4);
+const pts2 = makeParticles(500, 35, 0.06, 0x6C5CE7, 0.2);
+scene.add(pts1); scene.add(pts2);
+
+// ===== FLOATING TEXT FRAGMENTS =====
+// Using sprites as proxies for "knowledge fragments"
+const textFragments = ['AI', 'Learn', 'Transcribe', 'Notes', 'Flash', 'MCQ', 'Mind', 'Sync', 'Search', 'Ask'];
+const textGroup = new THREE.Group();
+const canvas2 = document.createElement('canvas');
+canvas2.width = 128; canvas2.height = 64;
+const ctx2 = canvas2.getContext('2d');
+textFragments.forEach((txt, i) => {
+  ctx2.clearRect(0, 0, 128, 64);
+  ctx2.fillStyle = 'rgba(240,240,245,0.3)';
+  ctx2.font = '700 32px "Clash Display", sans-serif';
+  ctx2.textAlign = 'center';
+  ctx2.textBaseline = 'middle';
+  ctx2.fillText(txt, 64, 32);
+  const tex = new THREE.CanvasTexture(canvas2);
+  const mat = new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0.15, blending: THREE.AdditiveBlending, depthWrite: false });
+  const sprite = new THREE.Sprite(mat);
+  const theta = Math.random() * Math.PI * 2;
+  const r = 7 + Math.random() * 5;
+  sprite.position.set(
+    Math.cos(theta) * r,
+    (Math.random() - 0.5) * 6,
+    Math.sin(theta) * r - 5
+  );
+  sprite.scale.set(2, 1, 1);
+  textGroup.add(sprite);
+});
+scene.add(textGroup);
+
+// ===== ORBITAL RINGS =====
+function makeRing(r, t, col, opa, rx, ry) {
+  const g = new THREE.TorusGeometry(r, t, 4, 180);
+  const m = new THREE.MeshBasicMaterial({
+    color: col, transparent: true, opacity: opa,
+    blending: THREE.AdditiveBlending, depthWrite: false
+  });
+  const mesh = new THREE.Mesh(g, m);
+  mesh.rotation.x = rx || 0;
+  mesh.rotation.y = ry || 0;
+  return mesh;
+}
+const rings = [
+  makeRing(4.0, 0.006, 0x6C5CE7, 0.12, Math.PI / 2.5),
+  makeRing(3.2, 0.005, 0x00D2D3, 0.08, Math.PI / 3, Math.PI / 5),
+  makeRing(5.2, 0.003, 0xFDCB6E, 0.05, Math.PI / 4)
+];
+rings.forEach(r => scene.add(r));
+
+// ===== SCROLL-BASED CAMERA MOTION =====
+gsap.to(camera.position, {
+  z: -8, y: -3, x: 1.5, ease: 'none',
+  scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 1.8 }
+});
+gsap.to(camera.rotation, {
+  x: 0.08, z: 0.05, ease: 'none',
+  scrollTrigger: { trigger: document.body, start: 'top top', end: 'bottom bottom', scrub: 1.8 }
+});
+
+// Core responds to scroll
+gsap.to(coreGroup.rotation, {
+  x: 0.2, y: Math.PI, ease: 'none',
+  scrollTrigger: { trigger: '#modes-wrap', start: 'top bottom', end: 'bottom top', scrub: 1.2 }
+});
+
+// Wave responds to scroll
+gsap.to(waveGroup.position, {
+  y: 1.5, ease: 'none',
+  scrollTrigger: { trigger: '#features-wrap', start: 'top bottom', end: 'bottom top', scrub: 1 }
+});
+
+// ===== ANIMATION LOOP =====
+const clock = new THREE.Clock();
+let tMx = 0.5, tMy = 0.5;
+let mVec = new THREE.Vector2(0.5, 0.5);
+let scrollProgress = 0;
+
+window.addEventListener('mousemove', e => {
+  tMx = e.clientX / innerWidth;
+  tMy = 1 - e.clientY / innerHeight;
+}, { passive: true });
+
+lenis.on('scroll', ({ progress }) => { scrollProgress = progress; });
+
+function animate3d() {
+  requestAnimationFrame(animate3d);
+  const t = clock.getElapsedTime();
+
+  mVec.x += (tMx - mVec.x) * 0.05;
+  mVec.y += (tMy - mVec.y) * 0.05;
+
+  // Core rotation
+  coreGroup.rotation.y = t * 0.15;
+  coreGroup.rotation.x = Math.sin(t * 0.2) * 0.1;
+
+  // Core rings individual rotation
+  coreRing.rotation.z = t * 0.12;
+  coreRing2.rotation.y = t * 0.08;
+
+  // Glow pulse
+  glowSphere.material.opacity = 0.15 + Math.sin(t * 1.2) * 0.1;
+  glowSphere.scale.setScalar(1 + Math.sin(t * 0.8) * 0.08);
+
+  // Energy particles orbit
+  const orbPos = orbPoints.geometry.attributes.position.array;
+  orbData.forEach((data, i) => {
+    data.theta += data.speed * 0.02;
+    data.phi += 0.005;
+    const r = data.r + Math.sin(t * 0.5 + data.offset) * 0.2;
+    orbPos[i*3] = r * Math.sin(data.phi) * Math.cos(data.theta);
+    orbPos[i*3+1] = r * Math.sin(data.phi) * Math.sin(data.theta);
+    orbPos[i*3+2] = r * Math.cos(data.phi);
+  });
+  orbPoints.geometry.attributes.position.needsUpdate = true;
+
+  // Data streams — pulse opacity
+  streamGroup.children.forEach((line, i) => {
+    const base = 0.08 + (i % 3) * 0.04;
+    line.material.opacity = base + Math.sin(t * 1.5 + i * 0.5) * 0.06;
+  });
+
+  // Knowledge nodes — float and rotate
+  nodeData.forEach((d, i) => {
+    d.mesh.rotation.x += d.rotSpeedX;
+    d.mesh.rotation.y += d.rotSpeedY;
+    const float = Math.sin(t * 0.4 + d.floatPhase) * d.floatAmp;
+    d.mesh.position.y = d.basePos.y + float;
+    // Pulse opacity slightly
+    d.mesh.material.opacity = 0.12 + Math.sin(t * 0.7 + i) * 0.08;
+  });
+
+  // Wave visualization — dynamic y displacement
+  const wavePos = waveLine.geometry.attributes.position.array;
+  for (let i = 0; i <= waveCount; i++) {
+    const tt = (i / waveCount) * Math.PI * 4;
+    const ampl = 0.4 + Math.sin(t * 0.3) * 0.2;
+    wavePos[i*3+1] = Math.sin(tt + t * 0.8) * ampl + Math.sin(tt * 1.5 + t * 0.5) * 0.15;
+  }
+  waveLine.geometry.attributes.position.needsUpdate = true;
+
+  // Particles drift
+  pts1.rotation.y = t * 0.012;
+  pts1.rotation.x = t * 0.004;
+  pts2.rotation.y = -t * 0.018;
+
+  // Rings breathe
+  rings[0].rotation.z = t * 0.05;
+  rings[1].rotation.y = t * 0.04;
+  rings[2].rotation.x += 0.003;
+  const rp = 1 + Math.sin(t * 0.6) * 0.03;
+  rings[0].scale.setScalar(rp);
+  rings[2].scale.setScalar(1 + Math.sin(t * 0.4 + 1) * 0.05);
+
+  // Text fragments drift slowly
+  textGroup.children.forEach((sprite, i) => {
+    sprite.position.y += Math.sin(t * 0.2 + i * 1.5) * 0.001;
+    sprite.material.opacity = 0.1 + Math.sin(t * 0.3 + i * 0.7) * 0.05;
+  });
+
+  // Mouse parallax on scene
+  const camX = (mVec.x - 0.5) * 0.4;
+  const camY = (mVec.y - 0.5) * 0.25;
+  scene.rotation.y += (camX - scene.rotation.y) * 0.03;
+  scene.rotation.x += (camY - scene.rotation.x) * 0.02;
+
+  // Bloom strength varies with scroll
+  bloom.strength = 0.6 + scrollProgress * 0.5;
+
+  composer.render();
+}
+animate3d();
+
+window.addEventListener('resize', () => {
+  camera.aspect = innerWidth / innerHeight;
+  camera.updateProjectionMatrix();
+  renderer.setSize(innerWidth, innerHeight);
+  composer.setSize(innerWidth, innerHeight);
+  bloom.setSize(innerWidth, innerHeight);
+  ScrollTrigger.refresh();
+});
+</script>
+</body>
+</html>
