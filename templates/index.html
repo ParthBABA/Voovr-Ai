@@ -276,8 +276,12 @@ h1,h2,h3,h4{font-family:var(--font-d);font-weight:600;text-transform:uppercase;}
 .cta-input{flex:1;background:rgba(255,255,255,.04);border:1px solid var(--border);padding:1.1rem 1.5rem;color:var(--text);font-family:var(--font-b);font-size:.9rem;transition:border-color .3s;outline:none;border-radius:8px;}
 .cta-input:focus{border-color:var(--primary);}
 .cta-input::placeholder{color:var(--text-faint);}
+.cta-auth{display:flex;flex-direction:column;align-items:center;gap:.8rem;margin-top:1rem;}
+.cta-divider{font-family:var(--font-m);font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;color:var(--text-faint);}
+.cta-google-btn{display:inline-flex;align-items:center;justify-content:center;gap:.7rem;min-width:220px;border-color:var(--border);background:rgba(255,255,255,.04);color:var(--text);}
+.cta-google-btn svg{width:18px;height:18px;flex-shrink:0;}
 .cta-footnote{font-family:var(--font-m);font-size:.55rem;letter-spacing:.1em;color:var(--text-faint);margin-top:1rem;text-transform:uppercase;}
-@media(max-width:550px){.cta-form{flex-direction:column;}}
+@media(max-width:550px){.cta-form{flex-direction:column;}.cta-google-btn{width:100%;}}
 
 /* Footer */
 footer{border-top:1px solid var(--border);position:relative;z-index:1;background:rgba(5,5,10,.6);}
@@ -730,6 +734,18 @@ footer{border-top:1px solid var(--border);position:relative;z-index:1;background
           <input type="email" placeholder="Enter your email" class="cta-input" required/>
           <button type="submit" class="btn btn-primary mag" style="border-radius:8px;flex-shrink:0;">Get Started Free</button>
         </form>
+        <div class="cta-auth">
+          <div class="cta-divider">OR</div>
+          <a href="/login/google" class="btn btn-ghost mag cta-google-btn">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M21.6 12.23c0-.7-.06-1.37-.18-2.02H12v3.82h5.38a4.6 4.6 0 0 1-2 3.02v2.5h3.24c1.9-1.75 2.98-4.33 2.98-7.32Z" fill="#4285F4"/>
+              <path d="M12 22c2.7 0 4.96-.9 6.62-2.43l-3.24-2.5c-.9.6-2.05.96-3.38.96-2.6 0-4.8-1.76-5.59-4.12H2.99v2.58A10 10 0 0 0 12 22Z" fill="#34A853"/>
+              <path d="M6.41 13.91A6.02 6.02 0 0 1 6.41 10.1V7.52H2.99a10 10 0 0 0 0 12.78l3.42-2.58Z" fill="#FBBC05"/>
+              <path d="M12 6.08c1.47 0 2.79.5 3.83 1.49l2.87-2.87A9.96 9.96 0 0 0 12 2a10 10 0 0 0-9.01 5.52l3.42 2.58C7.2 7.84 9.4 6.08 12 6.08Z" fill="#EA4335"/>
+            </svg>
+            Continue with Google
+          </a>
+        </div>
         <p class="cta-footnote">No credit card. Free tier includes 5 hours of transcription.</p>
       </div>
     </div>
