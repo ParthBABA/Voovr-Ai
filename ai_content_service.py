@@ -280,7 +280,7 @@ PROMPT_REGISTRY = {
             "Create flashcards from the following transcript.\n\n"
             "Return a JSON array of objects, each with 'front' and 'back' keys.\n"
             "Create 10-20 flashcards covering the most important concepts.\n"
-            "Example format: [{\"front\": \"What is X?\", \"back\": \"X is...\"}]\n\n"
+            "Example format: [{{\"front\": \"What is X?\", \"back\": \"X is...\"}}]\n\n"
             "Focus on:\n"
             "- Key definitions and terms\n"
             "- Cause-and-effect relationships\n"
