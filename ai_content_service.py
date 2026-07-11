@@ -381,7 +381,7 @@ PROMPT_REGISTRY = {
 # DB helpers for AI content
 # ---------------------------------------------------------------------------
 
-from backend.google_auth import get_db_connection
+from google_auth import get_db_connection
 
 
 def save_ai_content(meeting_id: int, content_type: str, content_json: str, 
